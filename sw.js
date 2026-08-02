@@ -1,6 +1,6 @@
 const CACHE = 'search-app-v1';
 const FILES = [
-  '/app.html',
+  '/index.html',
   '/manifest.json',
   '/',
 ];
