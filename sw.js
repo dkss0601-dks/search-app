@@ -1,8 +1,8 @@
 const CACHE = 'search-app-v1';
 const FILES = [
-  '/index.html',
-  '/manifest.json',
-  '/',
+  '/search-app/index.html',
+  '/search-app/manifest.json',
+  '/search-app/',
 ];
 
 // 安装：预缓存核心文件
