@@ -2,7 +2,7 @@
   "name": "聚合搜索",
   "short_name": "聚合搜索",
   "description": "极简聚合搜索引擎，搜遍全网一键直达",
-  "start_url": "/search-app/",
+  "start_url": "/search-app/index.html",
   "scope": "/search-app/",
   "display": "standalone",
   "orientation": "portrait",
