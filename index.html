@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, shrink-to-fit=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <!-- PWA -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -40,6 +40,8 @@
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { width: 100%; overflow-x: hidden; }
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
@@ -161,7 +163,6 @@
     font-size: 17px;
     font-weight: 600;
     color: var(--text);
-    text-decoration: none;
     transition: transform 0.2s, box-shadow 0.2s;
     box-shadow: var(--shadow);
     -webkit-tap-highlight-color: transparent;
@@ -195,11 +196,7 @@
     text-align: left;
   }
 
-  .app-btn-name {
-    font-size: 17px;
-    font-weight: 600;
-    line-height: 1.2;
-  }
+  .app-btn-name { font-weight: 600; line-height: 1.2; }
 
   .app-btn-hint {
     font-size: 12px;
@@ -411,74 +408,63 @@
 
 <script>
 (function () {
-  const STORAGE_KEY = 'search_mobile_history';
   const MAX = 10;
+  const KEY = 'search_history';
 
-  // ── DOM ──
-  const input        = document.getElementById('searchInput');
-  const clearBtn     = document.getElementById('clearBtn');
-  const historyList  = document.getElementById('historyList');
+  const input = document.getElementById('searchInput');
+  const clearBtn = document.getElementById('clearBtn');
+  const historyList = document.getElementById('historyList');
   const historyClear = document.getElementById('historyClear');
-  const installBanner= document.getElementById('installBanner');
-  const toastEl      = document.getElementById('toast');
+  const banner = document.getElementById('installBanner');
+  const toastEl = document.getElementById('toast');
 
-  // ── 平台：直接使用 https 链接 ──
-  // 手机端会通过 Universal Link / App Link 自动唤起 App
-  // 若未安装 App 则在浏览器中打开网页版
   const PLATFORMS = {
-    xhs:  { name: '小红书',   url: kw => `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(kw)}&source=web_search_result_notes` },
-    dy:   { name: '抖音',     url: kw => `https://www.douyin.com/search/${encodeURIComponent(kw)}` },
+    xhs:  { name: '小红书', url: kw => `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(kw)}&source=web_search_result_notes` },
+    dy:   { name: '抖音',   url: kw => `https://www.douyin.com/search/${encodeURIComponent(kw)}` },
     bili: { name: '哔哩哔哩', url: kw => `https://search.bilibili.com/all?keyword=${encodeURIComponent(kw)}` },
-    bing: { name: '必应',     url: kw => `https://www.bing.com/search?q=${encodeURIComponent(kw)}` },
+    bing: { name: '必应',   url: kw => `https://www.bing.com/search?q=${encodeURIComponent(kw)}` },
   };
 
-  // ── 历史管理 ──
-  function load() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-    catch { return []; }
-  }
+  const isPWA = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-  function save(list) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, MAX)));
-  }
+  // 历史
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } };
+  const save = list => { localStorage.setItem(KEY, JSON.stringify(list.slice(0, MAX))); };
 
   function add(kw) {
     const word = kw.trim();
     if (!word) return;
-    let list = load();
-    list = list.filter(v => v !== word);
+    const list = load().filter(v => v !== word);
     list.unshift(word);
     save(list);
     render();
   }
 
   function clearAll() {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(KEY);
     render();
     toast('历史已清空');
   }
 
   function render() {
     const list = load();
-    historyList.innerHTML = '';
     if (!list.length) {
       historyList.innerHTML = '<div class="history-empty">暂无搜索记录</div>';
       return;
     }
-    list.forEach(kw => {
-      const tag = document.createElement('span');
-      tag.className = 'history-tag';
-      tag.textContent = kw;
+    historyList.innerHTML = list.map(kw =>
+      `<span class="history-tag">${kw.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`
+    ).join('');
+    historyList.querySelectorAll('.history-tag').forEach((tag, i) => {
       tag.addEventListener('click', () => {
-        input.value = kw;
+        input.value = list[i];
         input.focus();
         toggleClear();
       });
-      historyList.appendChild(tag);
     });
   }
 
-  // ── 工具 ──
   function toast(msg) {
     toastEl.textContent = msg;
     toastEl.classList.add('show');
@@ -490,95 +476,45 @@
     clearBtn.classList.toggle('show', !!input.value.trim());
   }
 
-  // ── 搜索 ──
+  // 搜索跳转
   function openPlatform(platformId) {
     const kw = input.value.trim();
-    if (!kw) {
-      input.focus();
-      toast('请输入搜索关键词');
-      return;
-    }
-
+    if (!kw) { input.focus(); toast('请输入搜索关键词'); return; }
     add(kw);
-    const p = PLATFORMS[platformId];
-    const url = p.url(kw);
-
-    // 用 <a> 标签模拟真实点击，正确触发 App Links / Universal Links
-    const a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    toast(`已打开 ${p.name}`);
+    const url = PLATFORMS[platformId].url(kw);
+    // PWA 独立窗口用 location.href 触发 App Links；普通浏览器用 window.open
+    if (isPWA()) window.location.href = url; else window.open(url, '_blank');
+    toast(`已打开 ${PLATFORMS[platformId].name}`);
   }
 
-  // ── 事件 ──
+  // 事件绑定
   input.addEventListener('input', toggleClear);
-
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      openPlatform('xhs');
-    }
-  });
-
-  clearBtn.addEventListener('click', () => {
-    input.value = '';
-    input.focus();
-    toggleClear();
-  });
-
-  document.querySelectorAll('.app-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      openPlatform(btn.dataset.platform);
-    });
-  });
-
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); openPlatform('xhs'); } });
+  clearBtn.addEventListener('click', () => { input.value = ''; input.focus(); toggleClear(); });
   historyClear.addEventListener('click', clearAll);
+  document.querySelectorAll('.app-btn').forEach(btn => {
+    btn.addEventListener('click', () => openPlatform(btn.dataset.platform));
+  });
 
-  // ── PWA 安装提示 ──
-  // 仅在 Safari / Chrome 移动端显示
-  function showInstallHint() {
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-                      || navigator.standalone;
-    if (isMobile && !isStandalone) {
-      installBanner.style.display = 'block';
-    }
-  }
+  // PWA 安装
+  if (isMobile() && !isPWA()) banner.style.display = 'block';
 
-  // 监听 PWA beforeinstallprompt（Chrome）
-  let deferredPrompt;
-  window.addEventListener('beforeinstallprompt', (e) => {
+  window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
-    deferredPrompt = e;
-    installBanner.innerHTML = '👇 点击下方 <strong>安装</strong> 将此页变成独立 App';
-    installBanner.style.display = 'block';
-    installBanner.style.cursor = 'pointer';
-    installBanner.addEventListener('click', () => {
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then(result => {
-        installBanner.style.display = 'none';
-      });
-    });
+    banner.innerHTML = '👇 点击下方 <strong>安装</strong> 将此页变成独立 App';
+    banner.style.display = 'block';
+    banner.style.cursor = 'pointer';
+    banner.onclick = () => { e.prompt(); e.userChoice.then(() => banner.style.display = 'none'); };
   });
 
-  window.addEventListener('appinstalled', () => {
-    installBanner.style.display = 'none';
-    toast('安装成功！');
-  });
+  window.addEventListener('appinstalled', () => { banner.style.display = 'none'; toast('安装成功！'); });
 
-  // 注册 Service Worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 
-  // ── 初始化 ──
   render();
   toggleClear();
-  showInstallHint();
 })();
 </script>
 
