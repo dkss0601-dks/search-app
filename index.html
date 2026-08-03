@@ -483,7 +483,7 @@
 
   function openAppOrWeb(schemeUrl, webUrl) {
     if (!schemeUrl) { openUrl(webUrl); return; }
-    var fallback = setTimeout(function () { openUrl(webUrl); }, 2500);
+    var fallback = setTimeout(function () { openUrl(webUrl); }, 500);
     window.addEventListener('pagehide',  function () { clearTimeout(fallback); }, { once: true });
     window.addEventListener('visibilitychange', function () {
       if (document.hidden) clearTimeout(fallback);
