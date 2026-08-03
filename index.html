@@ -482,8 +482,8 @@
     if (!kw) { input.focus(); toast('请输入搜索关键词'); return; }
     add(kw);
     const url = PLATFORMS[platformId].url(kw);
-    // PWA 独立窗口用 location.href 触发 App Links；普通浏览器用 window.open
-    if (isPWA()) window.location.href = url; else window.open(url, '_blank');
+    // location.href 才能可靠触发 App Links / Universal Links 打开原生 App
+    window.location.href = url;
     toast(`已打开 ${PLATFORMS[platformId].name}`);
   }
 
