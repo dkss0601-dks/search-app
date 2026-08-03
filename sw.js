@@ -1,4 +1,4 @@
-const CACHE = 'search-app-v1';
+const CACHE = 'search-app-v2';
 const FILES = [
   '/search-app/index.html',
   '/search-app/manifest.json',
