@@ -503,9 +503,14 @@
     const p = PLATFORMS[platformId];
     const url = p.url(kw);
 
-    // 直接用 https 链接打开
-    // 手机端若安装了 App 且支持 Universal Link / App Link，会自动唤起 App
-    window.open(url, '_blank');
+    // 用 <a> 标签模拟真实点击，正确触发 App Links / Universal Links
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     toast(`已打开 ${p.name}`);
   }
 
