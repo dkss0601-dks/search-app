@@ -421,7 +421,7 @@
   const PLATFORMS = {
     xhs:  { name: '小红书', scheme: kw => `xhsdiscover://search/result?keyword=${encodeURIComponent(kw)}`, web: kw => `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(kw)}&source=web_search_result_notes` },
     dy:   { name: '抖音',   scheme: kw => `snssdk1128://search?keyword=${encodeURIComponent(kw)}`, web: kw => `https://www.douyin.com/search/${encodeURIComponent(kw)}` },
-    bili: { name: '哔哩哔哩', scheme: kw => `bilibili://search?keyword=${encodeURIComponent(kw)}`, web: kw => `https://search.bilibili.com/all?keyword=${encodeURIComponent(kw)}` },
+    bili: { name: '哔哩哔哩', scheme: kw => `bilibili://search/${encodeURIComponent(kw)}`, web: kw => `https://search.bilibili.com/all?keyword=${encodeURIComponent(kw)}` },
     bing: { name: '必应',   scheme: null, web: kw => `https://www.bing.com/search?q=${encodeURIComponent(kw)}` },
   };
 
@@ -476,24 +476,19 @@
     clearBtn.classList.toggle('show', !!input.value.trim());
   }
 
-  // 用真正的 <a> 标签点击触发 Android Intent，不用 window.open/location.href
+  // 跳转逻辑
   function openUrl(url) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => a.remove(), 100);
+    window.open(url, '_blank');
   }
 
-  function openAppOrWeb(schemeUrl, webUrl, name) {
+  function openAppOrWeb(schemeUrl, webUrl) {
     if (!schemeUrl) { openUrl(webUrl); return; }
-    openUrl(schemeUrl);
-    const t0 = Date.now();
-    setTimeout(() => {
-      if (Date.now() - t0 > 450) openUrl(webUrl);
-    }, 500);
+    var fallback = setTimeout(function () { openUrl(webUrl); }, 2500);
+    window.addEventListener('pagehide',  function () { clearTimeout(fallback); }, { once: true });
+    window.addEventListener('visibilitychange', function () {
+      if (document.hidden) clearTimeout(fallback);
+    }, { once: true });
+    window.location.href = schemeUrl;
   }
 
   function openPlatform(platformId) {
