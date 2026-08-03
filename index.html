@@ -419,10 +419,10 @@
   const toastEl = document.getElementById('toast');
 
   const PLATFORMS = {
-    xhs:  { name: '小红书', url: kw => `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(kw)}&source=web_search_result_notes` },
-    dy:   { name: '抖音',   url: kw => `https://www.douyin.com/search/${encodeURIComponent(kw)}` },
-    bili: { name: '哔哩哔哩', url: kw => `https://search.bilibili.com/all?keyword=${encodeURIComponent(kw)}` },
-    bing: { name: '必应',   url: kw => `https://www.bing.com/search?q=${encodeURIComponent(kw)}` },
+    xhs:  { name: '小红书', scheme: kw => `xhsdiscover://search/result?keyword=${encodeURIComponent(kw)}`, web: kw => `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(kw)}&source=web_search_result_notes` },
+    dy:   { name: '抖音',   scheme: kw => `snssdk1128://search?keyword=${encodeURIComponent(kw)}`, web: kw => `https://www.douyin.com/search/${encodeURIComponent(kw)}` },
+    bili: { name: '哔哩哔哩', scheme: kw => `bilibili://search?keyword=${encodeURIComponent(kw)}`, web: kw => `https://search.bilibili.com/all?keyword=${encodeURIComponent(kw)}` },
+    bing: { name: '必应',   scheme: null, web: kw => `https://www.bing.com/search?q=${encodeURIComponent(kw)}` },
   };
 
   const isPWA = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
@@ -476,15 +476,35 @@
     clearBtn.classList.toggle('show', !!input.value.trim());
   }
 
-  // 搜索跳转
+  // 用真正的 <a> 标签点击触发 Android Intent，不用 window.open/location.href
+  function openUrl(url) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => a.remove(), 100);
+  }
+
+  function openAppOrWeb(schemeUrl, webUrl, name) {
+    if (!schemeUrl) { openUrl(webUrl); return; }
+    openUrl(schemeUrl);
+    const t0 = Date.now();
+    setTimeout(() => {
+      if (Date.now() - t0 > 450) openUrl(webUrl);
+    }, 500);
+  }
+
   function openPlatform(platformId) {
     const kw = input.value.trim();
     if (!kw) { input.focus(); toast('请输入搜索关键词'); return; }
     add(kw);
-    const url = PLATFORMS[platformId].url(kw);
-    // location.href 才能可靠触发 App Links / Universal Links 打开原生 App
-    window.location.href = url;
-    toast(`已打开 ${PLATFORMS[platformId].name}`);
+    const p = PLATFORMS[platformId];
+    const scheme = p.scheme ? p.scheme(kw) : null;
+    const web = p.web(kw);
+    openAppOrWeb(scheme, web, p.name);
+    toast(`已打开 ${p.name}`);
   }
 
   // 事件绑定
