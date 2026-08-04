@@ -459,9 +459,8 @@
 (function () {
   const MAX = 10;
   const KEY = 'search_history';
-  // DeepSeek API 配置
-  const DS_API_KEY = 'sk-5e089bd456314d58a51b1d9d52b2bb3a';
-  const DS_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+  // DeepSeek API 配置（通过后端代理调用，避免 API Key 暴露）
+  var DS_API_PROXY = window.location.origin + '/api/classify';
 
   const input = document.getElementById('searchInput');
   const clearBtn = document.getElementById('clearBtn');
@@ -558,37 +557,17 @@
     searchIcon.classList.add('loading');
 
     try {
-      var resp = await fetch(DS_API_URL, {
+      var resp = await fetch(DS_API_PROXY, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + DS_API_KEY,
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          max_tokens: 100,
-          temperature: 0,
-          messages: [
-            { role: 'system', content: '你是一个搜索意图分类器。根据用户输入的关键词判断最合适的搜索平台。四个平台：xhs（小红书-经验分享/探店/穿搭/美妆/旅行/美食/测评/生活方式）、dy（抖音-短视频/热门/小妙招/娱乐/搞笑）、bili（哔哩哔哩-教程/科普/长视频/数码评测/考研考证）、bing（必应-查官网/百科/新闻/资料）。规则：生活经验类优先xhs，技术教程类优先bili，短平快内容优先dy，通用信息型默认bing。只返回JSON：{"platform":"xhs|dy|bili|bing","reason":"简短说明"}' },
-            { role: 'user', content: kw },
-          ],
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: kw }),
       });
-
       var data = await resp.json();
-      var text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-      if (text) {
-        text = text.trim();
-        var jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          var result = JSON.parse(jsonMatch[0]);
-          if (result && PLATFORMS[result.platform]) {
-            highlightPlatform(result.platform);
-            return;
-          }
-        }
+      if (data && PLATFORMS[data.platform]) {
+        highlightPlatform(data.platform);
+      } else {
+        highlightPlatform('xhs');
       }
-      highlightPlatform('xhs');
     } catch (err) {
       console.error('AI classify failed:', err);
       highlightPlatform('xhs');
