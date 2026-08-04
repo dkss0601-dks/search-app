@@ -1,7 +1,9 @@
-// Cloudflare Worker — AI 搜索分类代理
-// 部署方式：复制粘贴到 Cloudflare Workers 控制台，填入你的 DeepSeek API Key
+// Cloudflare Worker — AI 搜索分类代理 (SiliconFlow 版)
+// 在 Cloudflare Workers 中粘贴此代码，替换 YOUR_SILICONFLOW_API_KEY
 
-const DS_API_KEY = 'YOUR_DEEPSEEK_API_KEY_HERE'; // ← 在这里填你的 key，只存在 Cloudflare 服务器上
+const SF_API_KEY = 'YOUR_SILICONFLOW_API_KEY'; // ← 硅基流动 API Key
+const SF_API_URL = 'https://api.siliconflow.cn/v1/chat/completions';
+const MODEL = 'deepseek-ai/DeepSeek-V3'; // 硅基流动代理的 DeepSeek V3，国内毫秒级响应
 
 const SYSTEM_PROMPT = `你是一个搜索意图分类器。根据用户输入的关键词判断最合适的搜索平台。
 
@@ -21,7 +23,6 @@ const SYSTEM_PROMPT = `你是一个搜索意图分类器。根据用户输入的
 
 export default {
   async fetch(request) {
-    // CORS 预检
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         headers: {
@@ -32,7 +33,6 @@ export default {
       });
     }
 
-    // 只处理 /api/classify
     const url = new URL(request.url);
     if (request.method !== 'POST' || url.pathname !== '/api/classify') {
       return new Response('Not Found', { status: 404 });
@@ -44,14 +44,14 @@ export default {
         return jsonResponse({ platform: 'bing', reason: '空搜索' });
       }
 
-      const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      const resp = await fetch(SF_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${DS_API_KEY}`,
+          'Authorization': `Bearer ${SF_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'deepseek-chat',
+          model: MODEL,
           max_tokens: 100,
           temperature: 0,
           messages: [

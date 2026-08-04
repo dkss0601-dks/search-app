@@ -548,13 +548,21 @@
     });
   }
 
+  // 清除所有高亮，保持默认状态
+  function removeHighlight() {
+    currentPlatform = 'xhs';
+    appBtns.forEach(function(btn) {
+      btn.classList.remove('highlight');
+    });
+  }
+
   var classifyTimer = null;
   var classifyBusy = false;
 
   async function classify(keyword) {
     var kw = (keyword || input.value).trim();
     if (!kw || kw.length < 1) {
-      highlightPlatform('xhs');
+      removeHighlight();
       return;
     }
 
@@ -562,22 +570,31 @@
     classifyBusy = true;
     searchIcon.classList.add('loading');
 
+    // AbortController — 1.5 秒严格超时
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, 1500);
+
     try {
       var resp = await fetch(API_PROXY, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: kw }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
+
       var data = await resp.json();
       if (data && PLATFORMS[data.platform]) {
         highlightPlatform(data.platform);
       } else {
-        highlightPlatform('xhs');
+        removeHighlight();
       }
     } catch (err) {
+      // 超时 / 网络错误 / 任何异常 → 不高亮任何平台
       console.error('AI classify failed:', err);
-      highlightPlatform('xhs');
+      removeHighlight();
     } finally {
+      clearTimeout(timeoutId);
       classifyBusy = false;
       searchIcon.classList.remove('loading');
     }
@@ -653,7 +670,7 @@
     input.value = '';
     input.focus();
     toggleClear();
-    highlightPlatform('xhs');
+    removeHighlight();
   });
 
   searchIcon.addEventListener('click', function() {
