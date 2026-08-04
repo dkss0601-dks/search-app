@@ -459,8 +459,14 @@
 (function () {
   const MAX = 10;
   const KEY = 'search_history';
-  // DeepSeek API 配置（通过后端代理调用，避免 API Key 暴露）
-  var DS_API_PROXY = window.location.origin + '/api/classify';
+  // ============================================================
+  // API 代理地址
+  // 本地开发：http://localhost:3001/api/classify
+  // 生产环境：替换为你的 Cloudflare Worker URL
+  // ============================================================
+  var API_PROXY = window.location.hostname === 'localhost'
+    ? 'http://localhost:3001/api/classify'
+    : 'https://YOUR_WORKER.workers.dev/api/classify'; // ← 部署 Worker 后替换这里
 
   const input = document.getElementById('searchInput');
   const clearBtn = document.getElementById('clearBtn');
@@ -557,7 +563,7 @@
     searchIcon.classList.add('loading');
 
     try {
-      var resp = await fetch(DS_API_PROXY, {
+      var resp = await fetch(API_PROXY, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: kw }),
