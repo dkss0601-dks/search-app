@@ -1,0 +1,13 @@
+{
+  "name": "ai-search-router",
+  "version": "1.0.0",
+  "description": "AI 驱动的跨平台搜索路由器",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.0"
+  }
+}
