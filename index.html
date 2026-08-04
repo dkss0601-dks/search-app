@@ -587,7 +587,7 @@
     clearTimeout(classifyTimer);
     classifyTimer = setTimeout(function() {
       classify(keyword);
-    }, 300);
+    }, 200);
   }
 
   // ── 跳转逻辑 ──
@@ -597,11 +597,26 @@
 
   function openAppOrWeb(schemeUrl, webUrl) {
     if (!schemeUrl) { openUrl(webUrl); return; }
-    var fallback = setTimeout(function () { openUrl(webUrl); }, 500);
-    window.addEventListener('pagehide',  function () { clearTimeout(fallback); }, { once: true });
+
+    var settled = false;
+    function cancelFallback() {
+      if (!settled) { settled = true; clearTimeout(fallback); }
+    }
+
+    // 多种方式检测 App 是否成功唤起
+    window.addEventListener('pagehide', cancelFallback, { once: true });
     window.addEventListener('visibilitychange', function () {
-      if (document.hidden) clearTimeout(fallback);
+      if (document.hidden) cancelFallback();
     }, { once: true });
+    window.addEventListener('blur', cancelFallback, { once: true });
+
+    // 2.5 秒后仍然在前台 → App 没装，跳网页
+    var fallback = setTimeout(function () {
+      if (settled) return;
+      settled = true;
+      openUrl(webUrl);
+    }, 2500);
+
     window.location.href = schemeUrl;
   }
 
